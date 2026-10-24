@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5eee6">
+<title>Yunn 拍貼機</title>
+<style>
+:root{--ink:#29251f;--muted:#766e65;--paper:#fffaf4;--cream:#f5eee6;--pink:#e8b7ad;--line:#ded3c7;--accent:#795b50}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif}
+header{padding:24px 18px 12px;text-align:center}header .eyebrow{font-size:12px;letter-spacing:.2em;color:var(--muted)}h1{font-size:clamp(28px,7vw,42px);margin:8px 0 5px;letter-spacing:.05em}header p{margin:0;color:var(--muted);font-size:14px}
+main{width:min(980px,100%);margin:auto;padding:12px 14px 34px;display:grid;grid-template-columns:1fr;gap:14px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 8px 24px #55412c0a}
+.preview-wrap{position:relative;background:#201c1a;border-radius:16px;overflow:hidden;aspect-ratio:3/4;display:grid;place-items:center}
+video{width:100%;height:100%;object-fit:cover;display:block;transform:scale(var(--zoom,1));transition:transform .2s}
+#placeholder{color:#f9eee5;text-align:center;padding:22px;position:absolute;z-index:1;line-height:1.8}
+#countdown{position:absolute;inset:0;display:none;place-items:center;background:#0004;color:white;font-size:clamp(60px,18vw,120px);font-weight:800;text-shadow:0 3px 20px #0008;z-index:2}
+.status{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:12px 2px 0;color:var(--muted);font-size:13px}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+select,button{font:inherit;border-radius:12px;border:1px solid var(--line);padding:11px 12px;background:#fff;color:var(--ink);width:100%}
+button{cursor:pointer;font-weight:650;transition:transform .12s,opacity .12s}button:active{transform:scale(.98)}button:disabled{opacity:.42;cursor:not-allowed}
+.primary{background:var(--accent);color:white;border-color:var(--accent)}.soft{background:#f4e4df;border-color:#ead0c9}.wide{grid-column:1/-1}
+.button-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.section-title{font-size:17px;margin:0 0 10px}.hint{font-size:12px;line-height:1.7;color:var(--muted);margin:10px 2px 0}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.shot{aspect-ratio:3/4;background:#eee1d7;border-radius:10px;overflow:hidden;position:relative;border:1px solid var(--line);display:grid;place-items:center;color:#8b7b70;font-size:12px;text-align:center}.shot img{width:100%;height:100%;object-fit:cover}.shot span{padding:4px}
+.results{display:none}.results.show{display:block}.collage-preview{display:grid;grid-template-columns:1fr;gap:12px;background:#eee5dc;padding:14px;border:1px solid var(--line);border-radius:14px;max-width:460px;margin:0 auto}
+.polaroid{background:#fff;padding:7px 7px 25px;box-shadow:0 3px 8px #34261b1c;border-radius:2px;transform:rotate(var(--tilt,0deg));}.polaroid img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:#eee}.polaroid small{display:block;text-align:center;color:#6f655e;font-size:10px;margin-top:7px;letter-spacing:.04em}
+.printer-area{margin-top:16px;text-align:center;background:#f3e8de;border-radius:16px;padding:14px 12px 0;overflow:hidden}.printer{height:72px;max-width:270px;margin:0 auto;background:#d8cec4;border:2px solid #b8aa9e;border-radius:14px 14px 6px 6px;position:relative;box-shadow:inset 0 -7px #c8bcb1}.printer:before{content:"";position:absolute;left:16%;right:16%;top:13px;height:8px;border-radius:5px;background:#8b7c71}.printer:after{content:"";position:absolute;right:14px;top:12px;width:8px;height:8px;border-radius:50%;background:#7e9a7a}.paper-slot{height:7px;background:#82746a;position:absolute;bottom:7px;left:12%;right:12%;border-radius:4px}.printed-paper{width:min(150px,52%);margin:0 auto;height:0;opacity:0;overflow:hidden;background:#fff;padding:0 7px;box-shadow:0 4px 12px #34261b22;display:grid;grid-template-columns:1fr;gap:3px;transition:height 1.3s ease,opacity .3s,padding .3s}.printed-paper img{width:100%;aspect-ratio:3/4;object-fit:cover}.printer-area.printing .printed-paper{height:190px;opacity:1;padding:7px 7px 18px;animation:paperOut 1.5s ease-out both}.printer-area.printing .printer{animation:printerShake .18s ease-in-out 5 alternate}.print-status{font-size:12px;color:var(--muted);padding:9px 0 12px}@keyframes paperOut{0%{transform:translateY(-18px)}100%{transform:translateY(0)}}@keyframes printerShake{from{transform:translateX(-1px)}to{transform:translateX(1px)}}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:0 18px 28px}
+@media(min-width:760px){main{grid-template-columns:1.15fr .85fr;align-items:start}.left{position:sticky;top:12px}.right{display:grid;gap:14px}.controls{grid-template-columns:1fr 1fr}}
+
+.auth-overlay{position:fixed;inset:0;z-index:9999;background:rgba(35,29,26,.78);display:grid;place-items:center;padding:20px}
+.auth-card{width:min(380px,100%);background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 20px 70px #0003;text-align:center}
+.auth-card h2{margin:0 0 8px;font-size:23px}.auth-card p{color:var(--muted);font-size:14px;line-height:1.7}
+.auth-card input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;margin:8px 0 12px;letter-spacing:.25em;text-align:center}
+.auth-error{min-height:20px;color:#b04444;font-size:13px;margin:0 0 8px}.auth-count{font-size:12px;color:var(--muted);min-height:18px;margin-top:8px}.auth-card input{letter-spacing:.45em}
+.admin-link{display:inline-block;margin-top:14px;color:var(--accent);font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.admin-link:hover{opacity:.75}
+
+</style>
+</head>
+<body>
+
+<div class="auth-overlay" id="authOverlay">
+  <form class="auth-card" id="authForm">
+    <div style="font-size:34px;margin-bottom:8px">📷</div>
+    <h2>Yunn 拍貼機</h2>
+    <p>請先輸入暱稱，再輸入密碼開始使用拍貼機。</p>
+    <input id="authName" type="text" autocomplete="nickname" placeholder="請輸入你的暱稱" aria-label="使用者暱稱" maxlength="40" required style="letter-spacing:normal;text-align:left">
+    <input id="authPassword" type="password" inputmode="numeric" autocomplete="off" placeholder="• • • • • •" aria-label="拍貼機密碼" maxlength="6" minlength="6" pattern="[0-9]{6}" required>
+    <div class="auth-error" id="authError" role="alert"></div>
+    <button class="primary" id="authSubmit" type="submit">解鎖並開始</button>
+    <div class="auth-count" id="authCount"></div>
+    <a class="admin-link" href="https://docs.google.com/spreadsheets/d/1If9UMhtVTWx4StCiL7_0Dy5fHBCUhBlzB8sLC_PB1-U/edit" target="_blank" rel="noopener noreferrer">管理者後台（使用 Google 帳號登入）</a>
+  </form>
+</div>
+
+<header><div class="eyebrow">MINI PHOTO BOOTH</div><h1>Yunn 拍貼機</h1><p>把今天的小小瞬間，收藏成一張照片。</p></header>
+<main>
+<section class="panel left">
+  <div class="preview-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="placeholder">📷<br>按下「開啟相機」開始拍照<br><small>請允許瀏覽器使用相機</small></div>
+    <div id="countdown"></div>
+  </div>
+  <div class="status"><span id="status">相機尚未啟動</span><span id="progress">0 / 1 張</span></div>
+  <div class="controls">
+    <div><label for="timer">倒數秒數</label><select id="timer"><option value="0">直接拍攝（按下拍攝鍵立即拍）</option><option value="5">5 秒（測試）</option><option value="10">10 秒</option><option value="15" selected>15 秒</option><option value="20">20 秒</option></select></div>
+    <div><label for="zoom">放大倍率</label><select id="zoom"><option value="1">乘 1</option><option value="2">乘 2</option><option value="0.5">乘 0.5</option></select></div>
+    <button id="demo" class="soft wide">試用展示（不開啟相機）</button>
+    <button id="start" class="primary wide">開啟相機</button>
+    <button id="switchCamera" class="soft wide" disabled>切換前／後鏡頭</button>
+    <button id="shoot" class="primary wide" disabled>拍攝一張照片</button>
+    <button id="retake" disabled>重新拍攝</button><button id="reset">重新開始</button>
+  </div>
+  <p class="hint">想先看看效果，可按「試用展示」；這不會啟動相機。正式拍照時再按「開啟相機」，並允許瀏覽器使用相機。</p>
+</section>
+<section class="right">
+  <div class="panel">
+    <h2 class="section-title">拍攝進度</h2>
+    <div class="strip" id="strip" style="grid-template-columns:minmax(0,180px);justify-content:center">
+      <div class="shot"><span>你的拍立得照片</span></div>
+    </div>
+    <p class="hint">拍攝一張照片，加上白色拍立得外框後，可下載或觀看列印動畫。</p>
+  </div>
+  <div class="panel results" id="results">
+    <h2 class="section-title">你的拍貼成品</h2>
+    <div id="collage" class="collage-preview"></div>
+    <div class="button-row"><button id="download" class="primary">下載拍立得照片</button><button id="print">模擬列印</button></div>
+    <div class="printer-area" id="printerArea" aria-live="polite">
+      <div class="printed-paper" id="printedPaper"></div>
+      <div class="printer"><div class="paper-slot"></div></div>
+      <div class="print-status" id="printStatus">按「模擬列印」，看看照片慢慢從印表機出來。</div>
+    </div>
+    <div class="button-row"><button id="again" class="wide">再拍一組</button></div>
+  </div>
+  <div class="panel">
+    <h2 class="section-title">操作流程</h2>
+    <ol style="padding-left:21px;line-height:1.9;margin:0;font-size:14px">
+      <li>掃描 QR Code 或輸入網頁網址。</li>
+      <li>可先按「試用展示」預覽，不需要開啟相機；正式拍照再允許相機權限。</li>
+      <li>設定倒數秒數與放大倍率。</li>
+      <li>可選擇倒數時間；若選「直接拍攝」，仍要按下「拍攝一張照片」才會立即拍照。</li>
+      <li>預覽單張白色拍立得成品，可下載照片、觀看列印動畫或重新拍攝。</li>
+      <li>管理者後台僅能查看使用紀錄，無法查看使用者拍攝的照片。</li>
+    </ol>
+  </div>
+</section>
+</main>
+<footer>Yunn Mini Photo Booth · 相機影像只在此頁面暫存，不會自動上傳。使用暱稱與操作事件會記錄於管理者的使用紀錄表。</footer>
+<script>
+
+// Password gate is initialized first so other page errors cannot disable it.
+const authForm=document.querySelector('#authForm');
+const authInput=document.querySelector('#authPassword');
+const authNameInput=document.querySelector('#authName');
+const LOG_ENDPOINT='https://script.google.com/macros/s/AKfycbyd01heQ_41zn1QUNHMyfiICqJIRnSz5cUdFY7e5RULo1Q4trlpGJjCvc0sNprunPDO/exec';
+let boothSessionId='';
+try{boothSessionId=crypto.randomUUID()}catch(e){boothSessionId=String(Date.now())+'-'+Math.random().toString(36).slice(2)}
+function logUsage(eventName){
+ const name=authNameInput.value.trim().slice(0,40);
+ if(!name)return;
+ try{fetch(LOG_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({name,event:eventName,sessionId:boothSessionId}),keepalive:true}).catch(()=>{});}catch(e){}
+}
+const authError=document.querySelector('#authError');
+const authCount=document.querySelector('#authCount');
+const authSubmit=document.querySelector('#authSubmit');
+let wrongAttempts=0, lockUntil=0, lockTimer=null;
+function updateLockUI(){
+ const remaining=Math.max(0,Math.ceil((lockUntil-Date.now())/1000));
+ if(remaining>0){
+  authInput.disabled=true;authSubmit.disabled=true;
+  authError.textContent='輸入錯誤次數過多，請稍後再試。';
+  authCount.textContent=`請等待 ${remaining} 秒後再輸入。`;
+ }else{
+  authInput.disabled=false;authSubmit.disabled=false;
+  if(lockUntil){
+   authError.textContent='已解除鎖定，請重新輸入密碼。';
+   authCount.textContent='';
+   lockUntil=0;wrongAttempts=0;
+  }
+  if(lockTimer){clearInterval(lockTimer);lockTimer=null;}
+ }
+}
+authInput.addEventListener('input',()=>{
+ authInput.value=authInput.value.replace(/[^0-9]/g,'').slice(0,6);
+ authError.textContent='';
+});
+authForm.addEventListener('submit',(event)=>{
+ event.preventDefault();
+ if(Date.now()<lockUntil){updateLockUI();return;}
+ const value=authInput.value;
+ if(!authNameInput.value.trim()){authError.textContent='請先輸入暱稱。';authNameInput.focus();return;}
+ if(value==='000000'){
+  logUsage('login');
+  document.querySelector('#authOverlay').style.display='none';
+  authError.textContent='';authCount.textContent='';
+ }else{
+  wrongAttempts++;
+  authError.textContent='密碼錯誤，請重新輸入。';
+  authInput.value='';
+  authInput.focus();
+  if(wrongAttempts>3){
+   lockUntil=Date.now()+60*1000;
+   updateLockUI();
+   if(!lockTimer)lockTimer=setInterval(updateLockUI,250);
+  }else{
+   authCount.textContent=`已輸入錯誤 ${wrongAttempts} 次（第 4 次錯誤將鎖定 1 分鐘）。`;
+  }
+ }
+});
+
+const video=document.querySelector('#video'), placeholder=document.querySelector('#placeholder');
+const statusEl=document.querySelector('#status'), progress=document.querySelector('#progress'), countdown=document.querySelector('#countdown');
+const startBtn=document.querySelector('#start'), switchCameraBtn=document.querySelector('#switchCamera'), demoBtn=document.querySelector('#demo'), shootBtn=document.querySelector('#shoot'), retakeBtn=document.querySelector('#retake'), resetBtn=document.querySelector('#reset');
+const timerSel=document.querySelector('#timer'), zoomSel=document.querySelector('#zoom'), strip=document.querySelector('#strip'), results=document.querySelector('#results'), collage=document.querySelector('#collage');
+let stream=null, photos=[], busy=false, demoMode=false, facingMode='user';
+function updatePreviewTransform(){
+ const z=Number(zoomSel.value)>1?Number(zoomSel.value):1;
+ video.style.transform=(facingMode==='user'?'scaleX(-1) ':'')+`scale(${z})`;
+ video.style.width=zoomSel.value==='0.5'?'50%':'100%';
+ video.style.height=zoomSel.value==='0.5'?'50%':'100%';
+}
+zoomSel.addEventListener('change',updatePreviewTransform);
+async function startCamera(){
+ demoMode=false;
+ try{
+  if(!navigator.mediaDevices?.getUserMedia) throw new Error('此瀏覽器不支援相機，請使用較新的瀏覽器並以 HTTPS 開啟。');
+  // Stop the previous camera before requesting the other lens.
+  if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;video.srcObject=null;}
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode}},audio:false});
+  video.srcObject=stream;
+  await video.play();
+  placeholder.style.display='none';
+  video.style.display='block';
+  updatePreviewTransform();
+  switchCameraBtn.disabled=false;
+  demoMode=false;
+  statusEl.textContent=facingMode==='user'?'前置鏡頭已開啟':'後置鏡頭已開啟';
+  startBtn.textContent='相機已開啟';
+  shootBtn.disabled=false;
+  demoBtn.textContent='試用展示（不開啟相機）';
+ }catch(e){
+  if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
+  video.srcObject=null;
+  switchCameraBtn.disabled=true;
+  shootBtn.disabled=true;
+  statusEl.textContent='無法開啟相機';
+  alert('無法開啟相機：'+e.message+'\n請確認使用 HTTPS、允許相機權限，並確認裝置有可用的鏡頭。');
+ }
+}
+
+function makeDemoPhoto(title, subtitle, colors, shape){
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${colors[0]}"/><stop offset="1" stop-color="${colors[1]}"/></linearGradient></defs><rect width="600" height="800" fill="url(#g)"/><circle cx="${shape[0]}" cy="${shape[1]}" r="150" fill="#fff" opacity=".22"/><circle cx="${shape[2]}" cy="${shape[3]}" r="92" fill="#fff" opacity=".25"/><path d="M0 590 Q150 490 300 600 T600 570 V800 H0Z" fill="#fff" opacity=".28"/><text x="300" y="350" text-anchor="middle" font-family="sans-serif" font-size="42" fill="#fff" font-weight="700">${title}</text><text x="300" y="405" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#fff">${subtitle}</text><text x="300" y="735" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#fff" letter-spacing="5">YUNN PHOTO BOOTH</text></svg>`;
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+function startDemo(){
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;}
+ switchCameraBtn.disabled=true;
+ demoMode=true;
+ const demos=[
+  makeDemoPhoto('HELLO','A little moment',['#d7a69a','#8d6d76'],[180,210,420,310]),
+  makeDemoPhoto('SMILE','Keep this memory',['#b5b9a0','#718b83'],[410,200,190,370]),
+  makeDemoPhoto('TODAY','Good things happen',['#e8c99c','#c98c75'],[200,300,430,180]),
+  makeDemoPhoto('YUNN','Photo memories',['#a6b7cb','#807c9f'],[400,260,180,190])
+ ];
+ photos=[demos[0]];
+ placeholder.style.display='block';
+ placeholder.innerHTML='✨<br>試用展示模式<br><small>這是示範照片，不會使用相機</small>';
+ video.pause();video.removeAttribute('src');video.load();video.style.display='none';
+ statusEl.textContent='試用展示模式（未開啟相機）';startBtn.textContent='改用相機拍照';shootBtn.disabled=true;demoBtn.textContent='重新載入試用照片';
+ renderStrip();showCollage();
+}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+async function countDown(){
+ countdown.style.display='grid'; let n=Number(timerSel.value);
+ for(let i=n;i>0;i--){countdown.textContent=i;await wait(1000)}
+ countdown.textContent='拍！';await wait(250);countdown.style.display='none';
+}
+function capture(){
+ const canvas=document.createElement('canvas'), w=video.videoWidth||640,h=video.videoHeight||480;
+ canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');
+ // Mirror only front-camera selfies; rear-camera photos stay natural.
+ if(facingMode==='user'){ctx.translate(w,0);ctx.scale(-1,1);}
+ const z=Number(zoomSel.value);
+ if(z===0.5){ctx.fillStyle='#201c1a';ctx.fillRect(0,0,w,h);ctx.drawImage(video,w*0.25,h*0.25,w*0.5,h*0.5);}
+ else {const sw=w/z, sh=h/z, sx=(w-sw)/2, sy=(h-sh)/2;ctx.drawImage(video,sx,sy,sw,sh,0,0,w,h);}
+ return canvas.toDataURL('image/jpeg',.92);
+}
+function renderStrip(){
+ [...strip.children].forEach((el,i)=>{el.innerHTML=photos[i]?`<img src="${photos[i]}" alt="第 ${i+1} 張照片">`:`<span>第 ${i+1} 張</span>`});
+ progress.textContent=`${photos.length ? 1 : 0} / 1 張`;retakeBtn.disabled=photos.length===0||busy;
+}
+async function shoot(){
+ if(busy||!stream||demoMode)return;busy=true;shootBtn.disabled=true;retakeBtn.disabled=true;results.classList.remove('show');
+ try{
+  if(photos.length===0){const seconds=Number(timerSel.value);statusEl.textContent=seconds===0?'已按下拍攝鍵，立即拍攝中…':'準備拍攝';if(seconds>0)await countDown();photos.push(capture());logUsage('photo');renderStrip()}
+  statusEl.textContent='拍攝完成！';showCollage();
+ }finally{busy=false;shootBtn.disabled=!stream||photos.length>0;retakeBtn.disabled=photos.length===0}
+}
+function showCollage(){
+ collage.innerHTML='';
+ if(photos.length){
+  const frame=document.createElement('div');frame.className='polaroid';frame.style.setProperty('--tilt','-1deg');frame.style.maxWidth='280px';frame.style.margin='0 auto';
+  const img=document.createElement('img');img.src=photos[0];img.alt='你的拍立得照片';
+  const caption=document.createElement('small');caption.textContent='YUNN · PHOTO';
+  frame.append(img,caption);collage.appendChild(frame);
+ }
+ document.querySelector('#printedPaper').innerHTML=photos.length ? `<img src="${photos[0]}" alt="列印預覽照片">` : '';
+ document.querySelector('#printerArea').classList.remove('printing');document.querySelector('#printStatus').textContent='按「模擬列印」，看看照片慢慢從印表機出來。';
+ results.classList.add('show');results.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function resetAll(){photos=[];demoMode=false;switchCameraBtn.disabled=!stream;renderStrip();results.classList.remove('show');video.style.display='block';placeholder.style.display='block';placeholder.innerHTML='📷<br>按下「開啟相機」開始拍照<br><small>也可以先試用展示模式</small>';statusEl.textContent=stream?'相機已準備好':'相機尚未啟動';shootBtn.disabled=!stream||photos.length>0;retakeBtn.disabled=true;demoBtn.textContent='試用展示（不開啟相機）';startBtn.textContent=stream?'相機已開啟':'開啟相機'}
+demoBtn.addEventListener('click',startDemo);
+startBtn.addEventListener('click',()=>{video.style.display='block';if(stream){statusEl.textContent=facingMode==='user'?'前置鏡頭已準備好':'後置鏡頭已準備好';return}startCamera()});
+switchCameraBtn.addEventListener('click',async()=>{
+ if(busy||!stream)return;
+ switchCameraBtn.disabled=true;
+ facingMode=facingMode==='user'?'environment':'user';
+ statusEl.textContent=facingMode==='user'?'正在切換前置鏡頭…':'正在切換後置鏡頭…';
+ await startCamera();
+});
+shootBtn.addEventListener('click',()=>shoot());
+retakeBtn.addEventListener('click',()=>{if(busy||!photos.length)return;photos.pop();renderStrip();statusEl.textContent='已清除照片；按「拍攝一張照片」即可倒數拍攝或直接拍攝';shootBtn.disabled=!stream;results.classList.remove('show')});
+resetBtn.addEventListener('click',resetAll);
+document.querySelector('#again').addEventListener('click',()=>{resetAll();window.scrollTo({top:0,behavior:'smooth'})});
+function downloadPolaroids(){
+ if(photos.length!==1)return;
+ logUsage('download');
+ const img=new Image();
+ img.onload=()=>{
+  const c=document.createElement('canvas'),w=720,h=960,bottom=170,pad=28;
+  c.width=w;c.height=h+bottom;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  const targetW=w-pad*2,targetH=h-pad*2,scale=Math.max(targetW/img.width,targetH/img.height);
+  const sw=targetW/scale,sh=targetH/scale,sx=(img.width-sw)/2,sy=(img.height-sh)/2;
+  ctx.drawImage(img,sx,sy,sw,sh,pad,pad,targetW,targetH);
+  ctx.fillStyle='#6f655e';ctx.font='28px sans-serif';ctx.textAlign='center';
+  ctx.fillText('YUNN · PHOTO',w/2,h+90);
+  const a=document.createElement('a');a.download='yunn-polaroid-photo.jpg';a.href=c.toDataURL('image/jpeg',.95);a.click();
+ };
+ img.onerror=()=>alert('照片製作失敗，請再試一次。');
+ img.src=photos[0];
+}
+document.querySelector('#download').addEventListener('click',downloadPolaroids);
+document.querySelector('#print')?.addEventListener('click',()=>{
+ const area=document.querySelector('#printerArea'),status=document.querySelector('#printStatus');
+ area.classList.remove('printing');void area.offsetWidth;area.classList.add('printing');status.textContent='正在列印拍立得照片……';
+ window.setTimeout(()=>{status.textContent='列印完成！這是網頁動畫示意；要拿到實體照片，請下載後使用實體印表機列印。'},1650);
+});
+renderStrip();
+
+
+window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
+</script>
+</body>
+</html>
